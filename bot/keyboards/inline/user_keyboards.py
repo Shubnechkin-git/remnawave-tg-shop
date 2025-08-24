@@ -1,6 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 from config.settings import Settings
 
@@ -44,45 +44,11 @@ def get_main_menu_inline_keyboard(
         callback_data="main_action:apply_promo")
     builder.row(referral_button, promo_button)
 
-    language_button = InlineKeyboardButton(
-        text=_(key="menu_language_settings_inline"),
-        callback_data="main_action:language")
-    status_button_list = []
-    if settings.SERVER_STATUS_URL:
-        status_button_list.append(
-            InlineKeyboardButton(text=_(key="menu_server_status_button"),
-                                 url=settings.SERVER_STATUS_URL))
-
-    if status_button_list:
-        builder.row(language_button, *status_button_list)
-    else:
-        builder.row(language_button)
-
     if settings.SUPPORT_LINK:
         builder.row(
             InlineKeyboardButton(text=_(key="menu_support_button"),
                                  url=settings.SUPPORT_LINK))
 
-    if settings.TERMS_OF_SERVICE_URL:
-        builder.row(
-            InlineKeyboardButton(text=_(key="menu_terms_button"),
-                                 url=settings.TERMS_OF_SERVICE_URL))
-
-    return builder.as_markup()
-
-
-def get_language_selection_keyboard(i18n_instance,
-                                    current_lang: str) -> InlineKeyboardMarkup:
-    _ = lambda key, **kwargs: i18n_instance.gettext(current_lang, key, **kwargs
-                                                    )
-    builder = InlineKeyboardBuilder()
-    builder.button(text=f"🇬🇧 English {'✅' if current_lang == 'en' else ''}",
-                   callback_data="set_lang_en")
-    builder.button(text=f"🇷🇺 Русский {'✅' if current_lang == 'ru' else ''}",
-                   callback_data="set_lang_ru")
-    builder.button(text=_(key="back_to_main_menu_button"),
-                   callback_data="main_action:back_to_main")
-    builder.adjust(1)
     return builder.as_markup()
 
 
@@ -103,15 +69,34 @@ def get_subscription_options_keyboard(subscription_options: Dict[
                                       i18n_instance) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+    one_month_price = subscription_options.get(1) if subscription_options else None
     if subscription_options:
         for months, price in subscription_options.items():
             if price is not None:
-                button_text = _("subscribe_for_months_button",
-                                months=months,
-                                price=price,
-                                currency_symbol=currency_symbol_val)
-                builder.button(text=button_text,
-                               callback_data=f"subscribe_period:{months}")
+                button_text = _(
+                    "subscribe_for_months_button",
+                    months=months,
+                    price=int(price) if float(price).is_integer() else price,
+                    currency_symbol=currency_symbol_val,
+                )
+                if months > 1 and one_month_price is not None:
+                    full_price = months * one_month_price
+                    savings = full_price - price
+                    if savings > 0:
+                        monthly_price = round(price / months)
+                        button_text += _(
+                            "subscription_savings_suffix",
+                            per_month=int(monthly_price)
+                            if float(monthly_price).is_integer()
+                            else monthly_price,
+                            savings=int(savings)
+                            if float(savings).is_integer()
+                            else savings,
+                            currency_symbol=currency_symbol_val,
+                        )
+                builder.button(
+                    text=button_text, callback_data=f"subscribe_period:{months}"
+                )
         builder.adjust(1)
     builder.row(
         InlineKeyboardButton(text=_(key="back_to_main_menu_button"),
