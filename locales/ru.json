@@ -21,6 +21,7 @@
   "select_subscription_period": "Выберите срок подписки:",
   "no_subscription_options_available": "В данный момент нет доступных вариантов подписки.",
   "subscribe_for_months_button": "{months} мес. - {price} {currency_symbol}",
+  "subscription_savings_suffix": " (≈{per_month} {currency_symbol}/мес., -{savings} {currency_symbol})",
   "choose_payment_method": "Выберите способ оплаты:",
   "pay_button": "💳 Оплатить",
   "pay_with_yookassa_button": "💳 ЮKassa",

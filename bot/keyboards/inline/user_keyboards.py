@@ -89,15 +89,34 @@ def get_subscription_options_keyboard(subscription_options: Dict[
                                       i18n_instance) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
+    one_month_price = subscription_options.get(1) if subscription_options else None
     if subscription_options:
         for months, price in subscription_options.items():
             if price is not None:
-                button_text = _("subscribe_for_months_button",
-                                months=months,
-                                price=price,
-                                currency_symbol=currency_symbol_val)
-                builder.button(text=button_text,
-                               callback_data=f"subscribe_period:{months}")
+                button_text = _(
+                    "subscribe_for_months_button",
+                    months=months,
+                    price=int(price) if float(price).is_integer() else price,
+                    currency_symbol=currency_symbol_val,
+                )
+                if months > 1 and one_month_price is not None:
+                    full_price = months * one_month_price
+                    savings = full_price - price
+                    if savings > 0:
+                        monthly_price = round(price / months)
+                        button_text += _(
+                            "subscription_savings_suffix",
+                            per_month=int(monthly_price)
+                            if float(monthly_price).is_integer()
+                            else monthly_price,
+                            savings=int(savings)
+                            if float(savings).is_integer()
+                            else savings,
+                            currency_symbol=currency_symbol_val,
+                        )
+                builder.button(
+                    text=button_text, callback_data=f"subscribe_period:{months}"
+                )
         builder.adjust(1)
     builder.row(
         InlineKeyboardButton(text=_(key="back_to_main_menu_button"),
