@@ -30,7 +30,7 @@ class PromoCodeService:
         user_id: int,
         code_input: str,
         user_lang: str,
-    ) -> Tuple[bool, datetime | str]:
+    ) -> Tuple[bool, tuple[datetime, int] | str]:
         _ = lambda k, **kw: self.i18n.gettext(user_lang, k, **kw)
         code_input_upper = code_input.strip().upper()
 
@@ -74,7 +74,7 @@ class PromoCodeService:
                 except Exception as e:
                     logging.error(f"Failed to send promo activation notification: {e}")
                 
-                return True, new_end_date
+                return True, (new_end_date, bonus_days)
             else:
 
                 logging.error(

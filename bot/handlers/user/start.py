@@ -236,31 +236,32 @@ async def start_command_handler(message: types.Message,
             success, result = await promo_code_service.apply_promo_code(
                 session, user_id, promo_code_to_apply, current_lang
             )
-            
+
             if success:
                 await session.commit()
                 logging.info(f"Auto-applied promo code '{promo_code_to_apply}' for user {user_id}")
-                
+
                 # Get updated subscription details
                 active = await subscription_service.get_active_subscription_details(session, user_id)
                 config_link = active.get("config_link") if active else None
                 config_link = config_link or _("config_link_not_available")
-                
-                new_end_date = result if isinstance(result, datetime) else None
-                
+
+                new_end_date, bonus_days = result
+
                 promo_success_text = _(
                     "promo_code_applied_success_full",
+                    bonus_days=bonus_days,
                     end_date=(new_end_date.strftime("%d.%m.%Y %H:%M:%S") if new_end_date else "N/A"),
                     config_link=config_link,
                 )
-                
+
                 from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
                 await message.answer(
                     promo_success_text,
                     reply_markup=get_connect_and_main_keyboard(current_lang, i18n, settings, config_link),
                     parse_mode="HTML"
                 )
-                
+
                 # Don't show main menu if promo was successfully applied
                 return
             else:
