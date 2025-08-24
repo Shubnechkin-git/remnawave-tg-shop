@@ -9,8 +9,8 @@ from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
 from bot.services.notification_service import NotificationService
 from bot.keyboards.inline.user_keyboards import (
-    get_trial_confirmation_keyboard,
     get_main_menu_inline_keyboard,
+    get_connect_and_main_keyboard,
 )
 from bot.middlewares.i18n import JsonI18n
 from .start import send_main_menu
@@ -95,7 +95,10 @@ async def request_trial_confirmation_handler(
             config_link=config_link_for_trial,
             traffic_gb=traffic_display,
         )
-        
+        markup = get_connect_and_main_keyboard(
+            current_lang, i18n, settings, config_link_for_trial
+        )
+
         # Send notification to admin about new trial
         notification_service = NotificationService(callback.bot, settings, i18n)
         await notification_service.notify_trial_activation(user_id, end_date_obj)
@@ -115,13 +118,15 @@ async def request_trial_confirmation_handler(
         ):
             show_trial_button_after_action = True
 
+        markup = get_main_menu_inline_keyboard(
+            current_lang, i18n, settings, show_trial_button_after_action
+        )
+
     try:
         await callback.message.edit_text(
             final_message_text_in_chat,
             parse_mode="HTML",
-            reply_markup=get_main_menu_inline_keyboard(
-                current_lang, i18n, settings, show_trial_button_after_action
-            ),
+            reply_markup=markup,
             disable_web_page_preview=True,
         )
     except Exception as e_edit:
@@ -137,9 +142,7 @@ async def request_trial_confirmation_handler(
             await callback.message.chat.send_message(
                 final_message_text_in_chat,
                 parse_mode="HTML",
-                reply_markup=get_main_menu_inline_keyboard(
-                    current_lang, i18n, settings, show_trial_button_after_action
-                ),
+                reply_markup=markup,
                 disable_web_page_preview=True,
             )
 
@@ -214,6 +217,9 @@ async def confirm_activate_trial_handler(
             config_link=config_link_for_trial,
             traffic_gb=traffic_display,
         )
+        markup = get_connect_and_main_keyboard(
+            current_lang, i18n, settings, config_link_for_trial
+        )
     else:
         message_key_from_service = (
             activation_result.get("message_key", "trial_activation_failed")
@@ -230,13 +236,15 @@ async def confirm_activate_trial_handler(
         ):
             show_trial_button_after_action = True
 
+        markup = get_main_menu_inline_keyboard(
+            current_lang, i18n, settings, show_trial_button_after_action
+        )
+
     try:
         await callback.message.edit_text(
             final_message_text_in_chat,
             parse_mode="HTML",
-            reply_markup=get_main_menu_inline_keyboard(
-                current_lang, i18n, settings, show_trial_button_after_action
-            ),
+            reply_markup=markup,
             disable_web_page_preview=True,
         )
     except Exception as e_edit:
@@ -252,9 +260,7 @@ async def confirm_activate_trial_handler(
             await callback.message.chat.send_message(
                 final_message_text_in_chat,
                 parse_mode="HTML",
-                reply_markup=get_main_menu_inline_keyboard(
-                    current_lang, i18n, settings, show_trial_button_after_action
-                ),
+                reply_markup=markup,
                 disable_web_page_preview=True,
             )
 
