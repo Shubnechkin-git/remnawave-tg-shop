@@ -8,9 +8,7 @@
   "menu_referral_inline": "🎁 Referrals",
   "menu_apply_promo_button": "🎟 Promo Code",
   "menu_language_settings_inline": "🌐 Language",
-  "menu_server_status_button": "📊 Status",
   "menu_support_button": "💬 Support",
-  "menu_terms_button": "📄 Terms of Service",
   "back_to_main_menu_button": "⬅️ Back",
 
   "choose_language": "Choose language / Выберите язык:",
@@ -23,6 +21,7 @@
   "select_subscription_period": "Select subscription period:",
   "no_subscription_options_available": "No subscription options available at the moment.",
   "subscribe_for_months_button": "{months} mo. - {price} {currency_symbol}",
+  "subscription_savings_suffix": " (≈{per_month} {currency_symbol}/mo, -{savings} {currency_symbol})",
   "choose_payment_method": "Choose payment method:",
   "pay_button": "💳 Pay",
   "pay_with_yookassa_button": "💳 YooKassa",
