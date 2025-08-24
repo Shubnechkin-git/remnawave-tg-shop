@@ -21,8 +21,6 @@ class Settings(BaseSettings):
     DEFAULT_CURRENCY_SYMBOL: str = Field(default="RUB")
 
     SUPPORT_LINK: Optional[str] = Field(default=None)
-    SERVER_STATUS_URL: Optional[str] = Field(default=None)
-    TERMS_OF_SERVICE_URL: Optional[str] = Field(default=None)
 
     YOOKASSA_SHOP_ID: Optional[str] = None
     YOOKASSA_SECRET_KEY: Optional[str] = None

@@ -9,8 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config.settings import Settings
 from db.dal import payment_dal
 from bot.keyboards.inline.user_keyboards import (
-    get_subscription_options_keyboard, get_payment_method_keyboard,
-    get_payment_url_keyboard, get_back_to_main_menu_markup)
+    get_subscription_options_keyboard,
+    get_payment_method_keyboard,
+    get_payment_url_keyboard,
+    get_back_to_main_menu_markup,
+)
 from bot.services.yookassa_service import YooKassaService
 from bot.services.stars_service import StarsService
 from bot.services.crypto_pay_service import CryptoPayService
@@ -22,10 +25,13 @@ from bot.middlewares.i18n import JsonI18n
 router = Router(name="user_subscription_router")
 
 
-async def display_subscription_options(event: Union[types.Message,
-                                                    types.CallbackQuery],
-                                       i18n_data: dict, settings: Settings,
-                                       session: AsyncSession):
+async def display_subscription_options(
+        event: Union[types.Message, types.CallbackQuery],
+        i18n_data: dict,
+        settings: Settings,
+        session: AsyncSession,
+        subscription_service: SubscriptionService,
+):
     current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
     i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
 
@@ -40,35 +46,120 @@ async def display_subscription_options(event: Union[types.Message,
             await event.answer(err_msg)
         return
 
+    active = await subscription_service.get_active_subscription_details(
+        session, event.from_user.id
+    )
+    if active:
+        end_date = active.get("end_date")
+        days_left = (
+            (end_date.date() - datetime.now().date()).days if end_date else 0
+        )
+        text_content = get_text(
+            "my_subscription_details",
+            end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
+            days_left=max(0, days_left),
+            status=active.get(
+                "status_from_panel", get_text("status_active")
+            ).capitalize(),
+            config_link=active.get("config_link")
+            or get_text("config_link_not_available"),
+            traffic_limit=(
+                f"{active['traffic_limit_bytes'] / 2**30:.2f} GB"
+                if active.get("traffic_limit_bytes")
+                else get_text("traffic_unlimited")
+            ),
+            traffic_used=(
+                f"{active['traffic_used_bytes'] / 2**30:.2f} GB"
+                if active.get("traffic_used_bytes") is not None
+                else get_text("traffic_na")
+            ),
+        )
+        config_link = active.get("config_link")
+        if config_link:
+            reply_markup = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text=get_text("connect_button"), url=config_link)],
+                    [
+                        InlineKeyboardButton(
+                            text=get_text("back_to_main_menu_button"),
+                            callback_data="main_action:back_to_main",
+                        )
+                    ],
+                ]
+            )
+        else:
+            reply_markup = get_back_to_main_menu_markup(current_lang, i18n)
+
+        target_message_obj = (
+            event.message if isinstance(event, types.CallbackQuery) else event
+        )
+        if isinstance(event, types.CallbackQuery):
+            try:
+                await target_message_obj.edit_text(
+                    text_content,
+                    reply_markup=reply_markup,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
+            except Exception:
+                await target_message_obj.answer(
+                    text_content,
+                    reply_markup=reply_markup,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
+            await event.answer()
+        else:
+            await target_message_obj.answer(
+                text_content,
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+        return
+
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
-    text_content = get_text("select_subscription_period"
-                            ) if settings.subscription_options else get_text(
-                                "no_subscription_options_available")
+    text_content = (
+        get_text("select_subscription_period")
+        if settings.subscription_options
+        else get_text("no_subscription_options_available")
+    )
 
-    reply_markup = get_subscription_options_keyboard(
-        settings.subscription_options, currency_symbol_val, current_lang, i18n
-    ) if settings.subscription_options else get_back_to_main_menu_markup(
-        current_lang, i18n)
+    reply_markup = (
+        get_subscription_options_keyboard(
+            settings.subscription_options,
+            currency_symbol_val,
+            current_lang,
+            i18n,
+        )
+        if settings.subscription_options
+        else get_back_to_main_menu_markup(current_lang, i18n)
+    )
 
-    target_message_obj = event.message if isinstance(
-        event, types.CallbackQuery) else event
+    target_message_obj = (
+        event.message if isinstance(event, types.CallbackQuery) else event
+    )
     if not target_message_obj:
         if isinstance(event, types.CallbackQuery):
-            await event.answer(get_text("error_occurred_try_again"),
-                               show_alert=True)
+            await event.answer(
+                get_text("error_occurred_try_again"), show_alert=True
+            )
         return
 
     if isinstance(event, types.CallbackQuery):
         try:
-            await target_message_obj.edit_text(text_content,
-                                               reply_markup=reply_markup)
+            await target_message_obj.edit_text(
+                text_content, reply_markup=reply_markup
+            )
         except Exception:
-            await target_message_obj.answer(text_content,
-                                            reply_markup=reply_markup)
+            await target_message_obj.answer(
+                text_content, reply_markup=reply_markup
+            )
         await event.answer()
     else:
-        await target_message_obj.answer(text_content,
-                                        reply_markup=reply_markup)
+        await target_message_obj.answer(
+            text_content, reply_markup=reply_markup
+        )
 
 
 @router.callback_query(F.data.startswith("subscribe_period:"))
@@ -338,11 +429,16 @@ async def pay_crypto_callback_handler(
 
 
 @router.callback_query(F.data == "main_action:subscribe")
-async def reshow_subscription_options_callback(callback: types.CallbackQuery,
-                                               i18n_data: dict,
-                                               settings: Settings,
-                                               session: AsyncSession):
-    await display_subscription_options(callback, i18n_data, settings, session)
+async def reshow_subscription_options_callback(
+        callback: types.CallbackQuery,
+        i18n_data: dict,
+        settings: Settings,
+        session: AsyncSession,
+        subscription_service: SubscriptionService,
+):
+    await display_subscription_options(
+        callback, i18n_data, settings, session, subscription_service
+    )
 
 
 async def my_subscription_command_handler(
@@ -418,7 +514,21 @@ async def my_subscription_command_handler(
             else get_text("traffic_na")
         )
     )
-    markup = get_back_to_main_menu_markup(current_lang, i18n)
+    config_link = active.get("config_link")
+    if config_link:
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=get_text("connect_button"), url=config_link)],
+                [
+                    InlineKeyboardButton(
+                        text=get_text("back_to_main_menu_button"),
+                        callback_data="main_action:back_to_main",
+                    )
+                ],
+            ]
+        )
+    else:
+        markup = get_back_to_main_menu_markup(current_lang, i18n)
 
     if isinstance(event, types.CallbackQuery):
         await event.answer()
