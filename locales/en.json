@@ -21,6 +21,7 @@
   "select_subscription_period": "Select subscription period:",
   "no_subscription_options_available": "No subscription options available at the moment.",
   "subscribe_for_months_button": "{months} mo. - {price} {currency_symbol}",
+  "subscription_savings_suffix": " (≈{per_month} {currency_symbol}/mo, -{savings} {currency_symbol})",
   "choose_payment_method": "Choose payment method:",
   "pay_button": "💳 Pay",
   "pay_with_yookassa_button": "💳 YooKassa",
