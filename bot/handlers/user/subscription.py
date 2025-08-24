@@ -456,7 +456,12 @@ async def reshow_subscription_options_callback(
         subscription_service: SubscriptionService,
 ):
     await display_subscription_options(
-        callback, i18n_data, settings, session, subscription_service
+        callback,
+        i18n_data,
+        settings,
+        session,
+        subscription_service,
+        force_show_options=True,
     )
 
 

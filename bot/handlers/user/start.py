@@ -303,7 +303,12 @@ async def main_action_callback_handler(
 
     if action == "subscribe":
         await user_subscription_handlers.display_subscription_options(
-            callback, i18n_data, settings, session, subscription_service
+            callback,
+            i18n_data,
+            settings,
+            session,
+            subscription_service,
+            force_show_options=True,
         )
     elif action == "my_subscription":
 
